@@ -1,4 +1,9 @@
-// Handles chemical intelligence using Kekule.js to generate fabric objects
+import re
+
+with open('js/chemical-engine.js', 'r') as f:
+    content = f.read()
+
+new_content = """// Handles chemical intelligence using Kekule.js to generate fabric objects
 
 export const ChemicalEngine = {
     composer: null,
@@ -96,4 +101,7 @@ export const ChemicalEngine = {
             });
         });
     }
-};
+};"""
+
+with open('js/chemical-engine.js', 'w') as f:
+    f.write(new_content)

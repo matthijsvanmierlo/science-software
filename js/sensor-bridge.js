@@ -21,12 +21,59 @@ let time = 0;
 export const SensorBridge = {
     initChart(divId = 'plotly-chart') {
         if (!document.getElementById(divId)) return;
+
+        // Load graph type preference
+        const savedType = localStorage.getItem('chemcanvas_graph_type') || 'scatter';
+        this.setGraphType(savedType, false);
+
+        const select = document.getElementById('graph-type-select');
+        if (select) {
+            select.value = savedType;
+            select.addEventListener('change', (e) => {
+                this.setGraphType(e.target.value);
+            });
+        }
+
         Plotly.newPlot(divId, [plotlyData], plotlyLayout);
+    },
+
+    setGraphType(type, redraw = true) {
+        localStorage.setItem('chemcanvas_graph_type', type);
+
+        if (type === 'scatter') {
+            plotlyData.type = 'scatter';
+            plotlyData.mode = 'lines+markers';
+        } else if (type === 'line') {
+            plotlyData.type = 'scatter';
+            plotlyData.mode = 'lines';
+        } else if (type === 'bar') {
+            plotlyData.type = 'bar';
+            plotlyData.mode = ''; // mode not needed for bar
+        }
+
+        if (redraw && document.getElementById('plotly-chart')) {
+            Plotly.react('plotly-chart', [plotlyData], plotlyLayout);
+        }
     },
 
     updateChart(divId = 'plotly-chart', xVal, yVal) {
         if (!document.getElementById(divId)) return;
-        Plotly.extendTraces(divId, { x: [[xVal]], y: [[yVal]] }, [0]);
+
+        // Push data to our internal state so react works if we change type
+        plotlyData.x.push(xVal);
+        plotlyData.y.push(yVal);
+
+        // Use react instead of extendTraces to fully support type changes on the fly
+        Plotly.react(divId, [plotlyData], plotlyLayout);
+
+        // Update table
+        const tbody = document.querySelector('#data-table tbody');
+        if (tbody) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${xVal.toFixed(2)}</td><td>${yVal.toFixed(2)}</td>`;
+            // Insert at top
+            tbody.insertBefore(tr, tbody.firstChild);
+        }
     },
 
     startMockData(divId = 'plotly-chart') {
@@ -34,9 +81,15 @@ export const SensorBridge = {
         time = 0;
 
         // Reset chart data
+        plotlyData.x = [];
+        plotlyData.y = [];
         if (document.getElementById(divId)) {
-             Plotly.newPlot(divId, [{...plotlyData, x: [], y: []}], plotlyLayout);
+             Plotly.react(divId, [plotlyData], plotlyLayout);
         }
+
+        // Reset table
+        const tbody = document.querySelector('#data-table tbody');
+        if (tbody) tbody.innerHTML = '';
 
         const statusDiv = document.getElementById('sensor-status');
         if (statusDiv) {

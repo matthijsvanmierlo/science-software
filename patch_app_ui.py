@@ -1,43 +1,19 @@
-// js/app.js
-// Main Application Core: Event Bus and UI Bindings
+import re
 
-import { Storage } from './storage.js';
-import { Exporter } from './exporter.js';
-import { GlasswareLibrary } from './glassware-library.js';
-import { ChemicalEngine } from './chemical-engine.js';
+with open('js/app.js', 'r') as f:
+    content = f.read()
 
-let canvas = null;
-
-document.addEventListener('DOMContentLoaded', async () => {
-    // Only initialize canvas on the Studio page
-    if (!document.getElementById('main-canvas')) return;
-
-    // Initialize Fabric.js
-    const wrapper = document.getElementById('canvas-wrapper');
-    canvas = new fabric.Canvas('main-canvas', {
-        width: wrapper.clientWidth - 40,
-        height: wrapper.clientHeight - 40,
-        backgroundColor: 'white',
-        selection: true
+# Replace the hardcoded buttons logic and properties handling
+old_logic = """    // Bind UI Buttons
+    document.getElementById('btn-add-beaker').addEventListener('click', () => {
+        GlasswareLibrary.addGlassware(canvas, 'beaker', canvas.width/2, canvas.height/2, 50, '#3498db');
     });
 
-    // Add canvas container class for CSS styling
-    canvas.wrapperEl.classList.add('canvas-container');
+    document.getElementById('btn-add-flask').addEventListener('click', () => {
+        GlasswareLibrary.addGlassware(canvas, 'flask', canvas.width/2, canvas.height/2, 50, '#e74c3c');
+    });"""
 
-    // Handle Window Resize
-    window.addEventListener('resize', () => {
-        canvas.setWidth(wrapper.clientWidth - 40);
-        canvas.setHeight(wrapper.clientHeight - 40);
-        canvas.renderAll();
-    });
-
-    // Try loading autosaved state
-    const loaded = await Storage.loadState(canvas, 'autosave');
-
-    // Initialize Autosave loop
-    Storage.initAutosave(canvas, 3000);
-
-    // Bind UI Buttons - dynamic library
+new_logic = """    // Bind UI Buttons - dynamic library
     const renderGraphicsList = (filterText = '') => {
         const listDiv = document.getElementById('graphics-list');
         listDiv.innerHTML = '';
@@ -60,31 +36,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('graphics-search')?.addEventListener('input', (e) => {
         renderGraphicsList(e.target.value);
+    });"""
+
+content = content.replace(old_logic, new_logic)
+
+old_props_logic = """    // Handle Properties Panel
+    const propsPanel = document.getElementById('glassware-props');
+    const propFillLevel = document.getElementById('prop-fill-level');
+    const propLiquidColor = document.getElementById('prop-liquid-color');
+
+    canvas.on('selection:created', handleSelection);
+    canvas.on('selection:updated', handleSelection);
+    canvas.on('selection:cleared', () => {
+        propsPanel.classList.add('d-none');
     });
 
-    const moleculeModal = new bootstrap.Modal(document.getElementById('moleculeModal'), {
-        keyboard: false
-    });
+    function handleSelection(e) {
+        const activeObj = canvas.getActiveObject();
+        if (activeObj && (activeObj.customType === 'beaker' || activeObj.customType === 'flask')) {
+            propsPanel.classList.remove('d-none');
+            propFillLevel.value = activeObj.fillLevel;
+            propLiquidColor.value = activeObj.liquidColor;
 
-    document.getElementById('btn-add-molecule').addEventListener('click', () => {
-        moleculeModal.show();
-        // Delay initialization slightly to let modal render completely
-        setTimeout(() => {
-            ChemicalEngine.initComposer('chem-composer');
-        }, 200);
-    });
+            // Remove previous listeners to avoid duplicates
+            propFillLevel.oninput = null;
+            propLiquidColor.oninput = null;
 
-    document.getElementById('btn-insert-molecule')?.addEventListener('click', () => {
-        ChemicalEngine.addMoleculeToCanvasFromComposer(canvas, canvas.width/2, canvas.height/2);
-        moleculeModal.hide();
-    });
+            // Bind new listeners
+            propFillLevel.oninput = (ev) => {
+                GlasswareLibrary.updateGlassware(canvas, canvas.getActiveObject(), parseInt(ev.target.value), propLiquidColor.value);
+            };
 
-    // Handle Exports
-    document.getElementById('btn-export-svg')?.addEventListener('click', () => Exporter.exportSVG(canvas));
-    document.getElementById('btn-export-png')?.addEventListener('click', () => Exporter.exportPNG(canvas));
-    document.getElementById('btn-export-pdf')?.addEventListener('click', () => Exporter.exportPDF(canvas));
+            propLiquidColor.oninput = (ev) => {
+                GlasswareLibrary.updateGlassware(canvas, canvas.getActiveObject(), parseInt(propFillLevel.value), ev.target.value);
+            };
+        } else {
+            propsPanel.classList.add('d-none');
+        }
+    }"""
 
-    // Handle Properties Panel
+new_props_logic = """    // Handle Properties Panel
     const propsPanel = document.getElementById('dynamic-props');
     const propertiesContainer = document.getElementById('properties-panel');
 
@@ -109,7 +100,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 label.className = 'form-label small';
                 label.innerText = 'Fill Level';
                 const input = document.createElement('input');
-                input.setAttribute('aria-label', label.innerText);
                 input.type = 'range';
                 input.className = 'form-range';
                 input.min = '0';
@@ -127,7 +117,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 label.className = 'form-label small';
                 label.innerText = 'Liquid Color';
                 const input = document.createElement('input');
-                input.setAttribute('aria-label', label.innerText);
                 input.type = 'color';
                 input.className = 'form-control form-control-color w-100 mb-2';
                 input.value = props.liquidColor;
@@ -143,7 +132,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 label.className = 'form-label small';
                 label.innerText = 'Flame Size';
                 const input = document.createElement('input');
-                input.setAttribute('aria-label', label.innerText);
                 input.type = 'range';
                 input.className = 'form-range';
                 input.min = '0';
@@ -161,7 +149,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 label.className = 'form-label small';
                 label.innerText = 'Temperature (Visual)';
                 const input = document.createElement('input');
-                input.setAttribute('aria-label', label.innerText);
                 input.type = 'range';
                 input.className = 'form-range';
                 input.min = '0';
@@ -177,37 +164,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             propsPanel.classList.add('d-none');
             propertiesContainer.querySelector('.text-muted').classList.remove('d-none');
         }
-    }
+    }"""
 
-    // Keyboard Deletion
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Delete' || e.key === 'Backspace') {
-            // Prevent deletion if typing in an input
-            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+content = content.replace(old_props_logic, new_props_logic)
 
-            const activeObjects = canvas.getActiveObjects();
-            if (activeObjects.length) {
-                canvas.discardActiveObject();
-                activeObjects.forEach(obj => canvas.remove(obj));
-            }
-        }
-    });
-});
-
-// Theme Toggle Logic
-document.addEventListener('DOMContentLoaded', () => {
-    const btnTheme = document.getElementById('btn-toggle-theme');
-    if (btnTheme) {
-        btnTheme.addEventListener('click', () => {
-            const html = document.documentElement;
-            const icon = btnTheme.querySelector('i');
-            if (html.getAttribute('data-bs-theme') === 'light') {
-                html.setAttribute('data-bs-theme', 'dark');
-                icon.classList.replace('bi-moon', 'bi-sun');
-            } else {
-                html.setAttribute('data-bs-theme', 'light');
-                icon.classList.replace('bi-sun', 'bi-moon');
-            }
-        });
-    }
-});
+with open('js/app.js', 'w') as f:
+    f.write(content)

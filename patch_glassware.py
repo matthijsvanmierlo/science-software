@@ -1,4 +1,12 @@
-// Procedural SVG generation for lab glassware wrapped as Fabric.js Custom Classes
+import re
+
+with open('js/glassware-library.js', 'r') as f:
+    content = f.read()
+
+# I need to add properties and add new svgs
+# I'll create a catalog of available items and their default configs.
+
+new_glassware_content = """// Procedural SVG generation for lab glassware wrapped as Fabric.js Custom Classes
 
 export const GlasswareLibrary = {
     catalog: [
@@ -230,3 +238,7 @@ export const GlasswareLibrary = {
         });
     }
 };
+"""
+
+with open('js/glassware-library.js', 'w') as f:
+    f.write(new_glassware_content)
