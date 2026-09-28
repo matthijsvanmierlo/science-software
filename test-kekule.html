@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/kekule@0.9.3/dist/themes/default/kekule.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/kekule@0.9.3/dist/kekule.min.js"></script>
+</head>
+<body>
+    <div id="chem-composer" style="width: 800px; height: 600px;"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let composer = new Kekule.Editor.Composer(document.getElementById('chem-composer'));
+            composer.setCommonToolButtons(['undo', 'redo', 'copy', 'cut', 'paste', 'zoomIn', 'zoomOut']);
+            composer.setChemObjToolButtons(['manipulate', 'erase', 'bond', 'atomAndFormula', 'ring', 'charge']);
+            console.log(composer);
+        });
+    </script>
+</body>
+</html>

@@ -9,7 +9,7 @@ db.version(1).stores({
 export const Storage = {
     async saveState(fabricCanvas, name = 'autosave') {
         try {
-            const state = JSON.stringify(fabricCanvas.toJSON(['id', 'customType', 'fillLevel', 'liquidColor']));
+            const state = JSON.stringify(fabricCanvas.toJSON(['id', 'customType', 'customProps', 'smiles']));
 
             // Check if autosave exists
             const existing = await db.canvases.where('name').equals(name).first();
