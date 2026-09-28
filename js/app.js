@@ -68,15 +68,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('btn-add-molecule').addEventListener('click', () => {
         moleculeModal.show();
+        ChemicalEngine.activeEditingObject = null;
         // Delay initialization slightly to let modal render completely
         setTimeout(() => {
             ChemicalEngine.initComposer('chem-composer');
+            ChemicalEngine.composer.setChemObj(null);
         }, 200);
     });
 
     document.getElementById('btn-insert-molecule')?.addEventListener('click', () => {
-        ChemicalEngine.addMoleculeToCanvasFromComposer(canvas, canvas.width/2, canvas.height/2);
-        moleculeModal.hide();
+        if (ChemicalEngine.activeEditingObject) {
+            // Update existing
+            ChemicalEngine.getComposerMoleculeImage((dataUrl, kekuleJson) => {
+                const imgObj = ChemicalEngine.activeEditingObject;
+                imgObj.setSrc(dataUrl, () => {
+                    imgObj.set({ kekuleJson: kekuleJson });
+                    canvas.renderAll();
+                    moleculeModal.hide();
+                    ChemicalEngine.activeEditingObject = null;
+                });
+            });
+        } else {
+            // Add new
+            ChemicalEngine.addMoleculeToCanvasFromComposer(canvas, canvas.width/2, canvas.height/2);
+            moleculeModal.hide();
+        }
     });
 
     // Handle Exports
@@ -90,6 +106,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     canvas.on('selection:created', handleSelection);
     canvas.on('selection:updated', handleSelection);
+    canvas.on('mouse:dblclick', (e) => {
+        if (e.target && e.target.customType === 'molecule') {
+            moleculeModal.show();
+            setTimeout(() => {
+                ChemicalEngine.initComposer('chem-composer');
+                if (e.target.kekuleJson) {
+                    const mol = Kekule.IO.loadFormatData(e.target.kekuleJson, 'json');
+                    ChemicalEngine.composer.setChemObj(mol);
+                } else if (e.target.smiles) {
+                    const mol = Kekule.IO.loadFormatData(e.target.smiles, 'smi');
+                    ChemicalEngine.composer.setChemObj(mol);
+                }
+
+                // Store the active object so we can update it later instead of creating a new one
+                ChemicalEngine.activeEditingObject = e.target;
+            }, 200);
+        }
+    });
+
     canvas.on('selection:cleared', () => {
         propsPanel.classList.add('d-none');
         propertiesContainer.querySelector('.text-muted').classList.remove('d-none');

@@ -23,7 +23,13 @@ export const ChemicalEngine = {
             }
 
             const renderWidget = new Kekule.ChemWidget.Viewer(document);
-            renderWidget.setDimension('300px', '300px');
+            renderWidget.setAutosize(true);
+            const div = document.createElement('div');
+            div.style.position = 'absolute';
+            div.style.left = '-9999px';
+            div.style.top = '-9999px';
+            document.body.appendChild(div);
+            renderWidget.appendToElem(div);
             renderWidget.setRenderType(Kekule.Render.RendererType.R2D);
             renderWidget.setEnableToolbar(false);
             renderWidget.setChemObj(chemObj);
@@ -31,7 +37,8 @@ export const ChemicalEngine = {
             setTimeout(() => {
                 const dataUrl = renderWidget.exportToDataUri('image/png', {quality: 1});
                 renderWidget.finalize();
-                if (callback) callback(dataUrl);
+                document.body.removeChild(div);
+                if (callback) callback(dataUrl, Kekule.IO.saveFormatData(chemObj, 'json'));
             }, 100);
         } catch (e) {
             console.error('Failed to generate molecule image:', e);
@@ -39,7 +46,7 @@ export const ChemicalEngine = {
     },
 
     addMoleculeToCanvasFromComposer(fabricCanvas, left = 200, top = 200) {
-        this.getComposerMoleculeImage((dataUrl) => {
+        this.getComposerMoleculeImage((dataUrl, kekuleJson) => {
             fabric.Image.fromURL(dataUrl, (img) => {
                 img.set({
                     left: left,
@@ -48,6 +55,7 @@ export const ChemicalEngine = {
                     originY: 'center',
                     hasControls: true,
                     customType: 'molecule',
+                    kekuleJson: kekuleJson
                 });
                 img.scale(0.5);
                 fabricCanvas.add(img);
@@ -61,7 +69,13 @@ export const ChemicalEngine = {
         try {
             const mol = Kekule.IO.loadFormatData(smiles, 'smi');
             const renderWidget = new Kekule.ChemWidget.Viewer(document);
-            renderWidget.setDimension('300px', '300px');
+            renderWidget.setAutosize(true);
+            const div = document.createElement('div');
+            div.style.position = 'absolute';
+            div.style.left = '-9999px';
+            div.style.top = '-9999px';
+            document.body.appendChild(div);
+            renderWidget.appendToElem(div);
             renderWidget.setRenderType(Kekule.Render.RendererType.R2D);
             renderWidget.setEnableToolbar(false);
             renderWidget.setChemObj(mol);
@@ -69,7 +83,8 @@ export const ChemicalEngine = {
             setTimeout(() => {
                 const dataUrl = renderWidget.exportToDataUri('image/png', {quality: 1});
                 renderWidget.finalize();
-                if (callback) callback(dataUrl);
+                document.body.removeChild(div);
+                if (callback) callback(dataUrl, Kekule.IO.saveFormatData(mol, 'json'));
             }, 100);
         } catch (e) {
             console.error('Failed to parse SMILES or generate molecule image:', e);
